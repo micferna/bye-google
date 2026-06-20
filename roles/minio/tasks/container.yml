@@ -1,0 +1,25 @@
+---
+- name: Dossier MinIO
+  ansible.builtin.file:
+    path: "{{ data_root }}/minio/data"
+    state: directory
+    mode: "0750"
+
+- name: Fichier d'environnement MinIO
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ data_root }}/minio/.env"
+    mode: "0600"
+
+- name: Générer le compose MinIO
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ data_root }}/minio/docker-compose.yml"
+    mode: "0640"
+
+- name: Démarrer MinIO
+  ansible.builtin.command:
+    cmd: "{{ compose_cmd }} up -d --remove-orphans"
+    chdir: "{{ data_root }}/minio"
+  register: minio_up
+  changed_when: "'Started' in minio_up.stderr or 'Created' in minio_up.stderr or 'Recreated' in minio_up.stderr"

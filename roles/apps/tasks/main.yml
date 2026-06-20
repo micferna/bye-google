@@ -19,6 +19,8 @@
 
 - name: Recharger Caddy pour publier les routes des apps
   ansible.builtin.command:
-    cmd: "{{ engine_cmd }} exec byeg-caddy caddy reload --config /etc/caddy/Caddyfile"
+    cmd: >-
+      {{ ('systemctl reload caddy') if caddy_native | bool
+         else (engine_cmd ~ ' exec byeg-caddy caddy reload --config /etc/caddy/Caddyfile') }}
   when: found_apps.files | length > 0
   changed_when: true

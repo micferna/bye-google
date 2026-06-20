@@ -6,6 +6,23 @@
     admin off
 }
 
+{# Upstreams : DNS du conteneur, ou 127.0.0.1:<port> quand Caddy est natif #}
+{% set NAT = (caddy_mode == 'native') %}
+{% set up_authelia  = '127.0.0.1:' ~ native_ports.authelia  if NAT else 'authelia:9091' %}
+{% set up_homepage  = '127.0.0.1:' ~ native_ports.homepage  if NAT else 'homepage:3000' %}
+{% set up_nextcloud = '127.0.0.1:' ~ native_ports.nextcloud if NAT else 'nextcloud:80' %}
+{% set up_immich    = '127.0.0.1:' ~ native_ports.immich    if NAT else 'immich-server:2283' %}
+{% if NAT %}
+{%   set up_minio_api = '127.0.0.1:' ~ native_ports.minio_api %}
+{%   set up_minio_con = '127.0.0.1:' ~ native_ports.minio_console %}
+{% elif minio_mode == 'native' %}
+{%   set up_minio_api = 'host.docker.internal:' ~ native_ports.minio_api %}
+{%   set up_minio_con = 'host.docker.internal:' ~ native_ports.minio_console %}
+{% else %}
+{%   set up_minio_api = 'minio:9000' %}
+{%   set up_minio_con = 'minio:9001' %}
+{% endif %}
+
 # ── Snippets réutilisables ──────────────────────────────────────────────
 (tls_conf) {
 {% if tls_internal %}
@@ -25,7 +42,7 @@
 
 # Protège un site derrière le SSO Authelia
 (authelia) {
-    forward_auth authelia:9091 {
+    forward_auth {{ up_authelia }} {
         uri /api/authz/forward-auth
         copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
     }
@@ -50,7 +67,7 @@ auth.{{ domain }} {
     import tls_conf
     import secure_headers
     import logging
-    reverse_proxy authelia:9091
+    reverse_proxy {{ up_authelia }}
 }
 
 # ── Dashboard (protégé par SSO) ─────────────────────────────────────────
@@ -59,7 +76,7 @@ home.{{ domain }} {
     import secure_headers
     import logging
     import authelia
-    reverse_proxy homepage:3000
+    reverse_proxy {{ up_homepage }}
 }
 
 {% if enable_nextcloud %}
@@ -70,7 +87,7 @@ cloud.{{ domain }} {
     import logging
     redir /.well-known/carddav /remote.php/dav 301
     redir /.well-known/caldav /remote.php/dav 301
-    reverse_proxy nextcloud:80
+    reverse_proxy {{ up_nextcloud }}
 }
 {% endif %}
 
@@ -80,7 +97,7 @@ photos.{{ domain }} {
     import tls_conf
     import secure_headers
     import logging
-    reverse_proxy immich-server:2283
+    reverse_proxy {{ up_immich }}
 }
 {% endif %}
 
@@ -89,13 +106,13 @@ photos.{{ domain }} {
 s3.{{ domain }} {
     import tls_conf
     import logging
-    reverse_proxy minio:9000
+    reverse_proxy {{ up_minio_api }}
 }
 minio.{{ domain }} {
     import tls_conf
     import secure_headers
     import logging
-    reverse_proxy minio:9001
+    reverse_proxy {{ up_minio_con }}
 }
 {% endif %}
 

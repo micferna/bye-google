@@ -12,6 +12,9 @@ services:
       SIGNUPS_ALLOWED: "true"
     volumes:
       - data:/data
+    # Port loopback (inoffensif en mode conteneur ; utilisé si Caddy est natif)
+    ports:
+      - "127.0.0.1:8200:80"
     networks: [edge]
 
 volumes:

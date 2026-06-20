@@ -8,6 +8,9 @@ services:
     security_opt: ["no-new-privileges:true"]
     volumes:
       - data:/app/data
+    # Port loopback (inoffensif en mode conteneur ; utilisé si Caddy est natif)
+    ports:
+      - "127.0.0.1:8201:3001"
     networks: [edge]
 
 volumes:

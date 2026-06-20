@@ -1,0 +1,33 @@
+---
+# Installe Caddy en natif (binaire + systemd) via le dépôt officiel Cloudsmith.
+- name: Dossier des clés APT
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Clé GPG Caddy
+  ansible.builtin.get_url:
+    url: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+    dest: /etc/apt/keyrings/caddy-stable.asc
+    mode: "0644"
+
+- name: Dépôt Caddy
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/caddy-stable.asc]
+      https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main
+    filename: caddy-stable
+    state: present
+
+- name: Installer Caddy
+  ansible.builtin.apt:
+    name: caddy
+    state: present
+    update_cache: true
+
+- name: Démarrer et activer le service Caddy
+  ansible.builtin.systemd:
+    name: caddy
+    enabled: true
+    state: started

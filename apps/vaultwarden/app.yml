@@ -1,5 +1,6 @@
 name: vaultwarden
 subdomain: vault
 port: 80
+host_port: 8200   # port 127.0.0.1 utilisé quand Caddy est natif
 # Vaultwarden a sa propre authentification forte -> pas de double SSO.
 protect: false

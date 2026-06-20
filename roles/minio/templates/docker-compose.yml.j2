@@ -15,7 +15,13 @@ services:
     volumes:
       - {{ data_root }}/minio/data:/data
     networks: [edge]
+{% if caddy_native | bool %}
+    ports:
+      - "127.0.0.1:{{ native_ports.minio_api }}:9000"
+      - "127.0.0.1:{{ native_ports.minio_console }}:9001"
+{% else %}
     expose: ["9000", "9001"]
+{% endif %}
 
 networks:
   edge:

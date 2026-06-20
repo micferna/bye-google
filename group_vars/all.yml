@@ -23,6 +23,25 @@ timezone: "Europe/Paris"
 tls_internal: true
 acme_email: ""
 
+# ── Mode d'exécution par service ────────────────────────────────────────
+# "container" (défaut) ou "native" (binaire + systemd, SANS conteneur).
+# En natif, Caddy joint les backends conteneurisés via des ports publiés sur 127.0.0.1.
+caddy_mode: "container"
+minio_mode: "container"
+# Ports localhost utilisés quand Caddy est natif (et/ou MinIO natif).
+native_ports:
+  authelia: 9091
+  homepage: 3000
+  nextcloud: 8081
+  immich: 2283
+  minio_api: 9000
+  minio_console: 9001
+# Dérivés (ne pas modifier) :
+caddy_native: "{{ caddy_mode == 'native' }}"
+caddyfile_dest: "{{ '/etc/caddy/Caddyfile' if caddy_mode == 'native' else data_root + '/core/Caddyfile' }}"
+caddy_apps_dest: "{{ '/etc/caddy/apps' if caddy_mode == 'native' else data_root + '/core/apps-caddy' }}"
+caddy_log_host_dir: "{{ '/var/log/caddy' if caddy_mode == 'native' else data_root + '/core/logs' }}"
+
 # ── Moteur de conteneurs ────────────────────────────────────────────────
 # "docker" : le plus testé.
 # "podman" : SANS démon, compatible rootless — pour qui ne veut pas de Docker.
@@ -88,6 +107,8 @@ auto_reboot_time: "04:00"
 
 # ── MinIO (S3) ──────────────────────────────────────────────────────────
 minio_root_user: "byeadmin"
+# Architecture pour le binaire MinIO natif (amd64 / arm64)
+minio_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else ('arm64' if ansible_architecture == 'aarch64' else ansible_architecture) }}"
 
 # ── Versions épinglées (modifiables) ────────────────────────────────────
 caddy_version: "2.8"

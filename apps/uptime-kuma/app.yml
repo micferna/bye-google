@@ -1,5 +1,6 @@
 name: uptime-kuma
 subdomain: uptime
 port: 3001
+host_port: 8201   # port 127.0.0.1 utilisé quand Caddy est natif
 # Uptime-Kuma a sa propre authentification (admin créé au 1er lancement).
 protect: false

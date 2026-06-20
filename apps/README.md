@@ -32,6 +32,22 @@ name: monapp
 subdomain: monapp     # https://monapp.<domaine>
 port: 8080            # port écouté DANS le conteneur
 protect: true         # true => derrière le SSO Authelia
+host_port: 8202       # requis seulement si caddy_mode: native (voir ci-dessous)
 ```
 
 Voir `vaultwarden/` pour un exemple complet et fonctionnel.
+
+## Si Caddy est en mode natif (`caddy_mode: native`)
+
+Caddy tourne alors sur l'hôte et ne peut pas joindre tes conteneurs par leur nom DNS.
+Ton app doit donc :
+
+1. déclarer un `host_port` unique dans `app.yml` ;
+2. publier ce port **sur loopback** dans son compose :
+
+   ```yaml
+   ports:
+     - "127.0.0.1:8202:8080"   # 127.0.0.1:<host_port>:<port>
+   ```
+
+C'est inoffensif en mode conteneur (Caddy utilise le DNS), et indispensable en mode natif.

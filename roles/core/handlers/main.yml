@@ -1,7 +1,9 @@
 ---
 - name: Reload caddy
   ansible.builtin.command:
-    cmd: "{{ engine_cmd }} exec byeg-caddy caddy reload --config /etc/caddy/Caddyfile"
+    cmd: >-
+      {{ ('systemctl reload caddy') if caddy_native | bool
+         else (engine_cmd ~ ' exec byeg-caddy caddy reload --config /etc/caddy/Caddyfile') }}
   register: caddy_reload
   failed_when: false
   changed_when: caddy_reload.rc == 0
