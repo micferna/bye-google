@@ -4,6 +4,7 @@
     tls internal
 {% endif %}
     import secure_headers
+    import logging
 {% if app.protect | default(false) %}
     import authelia
 {% endif %}

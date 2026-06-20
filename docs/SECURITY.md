@@ -16,8 +16,11 @@ Philosophie : **fermé par défaut**, surface d'attaque minimale, tout reproduct
     des conteneurs (moteur). Y mettre un DROP couperait tout le réseau des conteneurs.
   - Ports de sortie en plus : `firewall_extra_egress_tcp` / `firewall_extra_egress_udp`.
     Désactiver l'egress strict : `firewall_strict: false`.
-- **CrowdSec** (`roles/crowdsec`) : détection comportementale (SSH/HTTP/scans) + bouncer pare-feu
-  nftables qui bannit les IP malveillantes — en complément de **fail2ban**.
+- **CrowdSec** (`roles/crowdsec`) : détection comportementale + bouncer pare-feu nftables qui
+  bannit les IP malveillantes — en complément de **fail2ban**. Couvre **SSH** (journald) **et les
+  attaques HTTP** : Caddy écrit un journal d'accès JSON (`{{ data_root }}/core/logs/access.log`)
+  que CrowdSec parse via la collection `crowdsecurity/caddy`. Les IP fautives sont bannies au
+  niveau nftables — donc **avant même d'atteindre Caddy** (pas de build Caddy custom requis).
 - **Moteur** : Docker (durci via `daemon.json`) **ou** Podman sans démon / rootless
   (`container_engine: podman`) pour réduire la surface d'attaque.
 - **fail2ban** bannit les tentatives SSH en force brute.
@@ -77,7 +80,6 @@ Les sous-domaines doivent pointer vers l'IP du serveur. Options :
 
 ## Limites connues / pistes d'amélioration
 
-- Brancher le **bouncer CrowdSec dans Caddy** (en plus du bouncer pare-feu) pour bloquer au niveau HTTP.
 - Activer **Authelia 2FA obligatoire** sur les interfaces d'admin.
 - Isoler davantage avec des conteneurs **rootless (Podman)** si ton modèle de menace l'exige.
 - Brancher des **alertes** (Uptime-Kuma → notif) et l'envoi des sauvegardes **hors-site**.

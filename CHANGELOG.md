@@ -3,6 +3,16 @@
 Toutes les évolutions notables de ce projet sont documentées ici.
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [Non publié]
+
+### Ajouté
+- **CrowdSec parse les logs d'accès Caddy** (collection `crowdsecurity/caddy`) : les attaques
+  HTTP sont détectées puis bannies au niveau du pare-feu nftables, sans build Caddy custom.
+  Caddy écrit un journal JSON dans `core/logs/access.log` (toggle `crowdsec_caddy_logs`).
+
+### Corrigé
+- CI : job sécurité (gitleaks `GITHUB_TOKEN` requis + `trivy-action` épinglé sur un tag valide).
+
 ## [0.1.0] - 2026-06-21
 
 ### Ajouté
