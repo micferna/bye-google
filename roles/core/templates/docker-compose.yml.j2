@@ -2,6 +2,7 @@
 name: core
 
 services:
+{% if not caddy_native | bool %}
   caddy:
     image: caddy:{{ caddy_version }}
     container_name: byeg-caddy
@@ -20,7 +21,12 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     networks: [edge]
+{% if minio_mode == 'native' %}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+{% endif %}
 
+{% endif %}
   authelia:
     image: authelia/authelia:{{ authelia_version }}
     container_name: byeg-authelia
@@ -31,7 +37,12 @@ services:
     volumes:
       - {{ data_root }}/core/authelia:/config
     networks: [edge]
+{% if caddy_native | bool %}
+    ports:
+      - "127.0.0.1:{{ native_ports.authelia }}:9091"
+{% else %}
     expose: ["9091"]
+{% endif %}
 
   # Proxy en lecture seule du socket Docker (évite d'exposer le socket brut à Homepage)
   dockerproxy:
@@ -55,8 +66,13 @@ services:
     volumes:
       - {{ data_root }}/core/homepage:/app/config
     networks: [edge]
-    expose: ["3000"]
     depends_on: [dockerproxy]
+{% if caddy_native | bool %}
+    ports:
+      - "127.0.0.1:{{ native_ports.homepage }}:3000"
+{% else %}
+    expose: ["3000"]
+{% endif %}
 
 volumes:
   caddy_data:

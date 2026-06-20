@@ -58,7 +58,7 @@
     mode: "0644"
     content: |
       filenames:
-        - {{ data_root }}/core/logs/access.log
+        - {{ caddy_log_host_dir }}/access.log
       labels:
         type: caddy
   when: crowdsec_caddy_logs | default(true)

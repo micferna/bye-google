@@ -42,6 +42,10 @@ services:
       OVERWRITEPROTOCOL: https
       OVERWRITECLIURL: "https://cloud.{{ domain }}"
       TRUSTED_PROXIES: "172.16.0.0/12"
+{% if caddy_native | bool %}
+    ports:
+      - "127.0.0.1:{{ native_ports.nextcloud }}:80"
+{% endif %}
     networks: [internal, edge]
 
 volumes:

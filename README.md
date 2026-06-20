@@ -145,8 +145,23 @@ peut fonctionner en **rootless**. Le projet bascule automatiquement `docker comp
 > ⚠️ Réalité technique : un déploiement **100 % sans conteneur** n'est pas réaliste pour
 > cette pile — **Immich** n'est distribué qu'en conteneur par l'éditeur, et Nextcloud + ses
 > dépendances en natif deviennent ingérables. Podman répond au besoin « pas de Docker » sans
-> ce coût de maintenance. Caddy et MinIO étant de simples binaires, une option d'install
-> **native** pour ceux-là peut être ajoutée — demande si tu la veux.
+> ce coût de maintenance.
+
+### Install native (binaire + systemd) pour Caddy & MinIO
+
+Caddy et MinIO étant de simples binaires, ils peuvent tourner **sans conteneur** :
+
+```yaml
+caddy_mode: native   # Caddy installé via apt (dépôt officiel) + systemd
+minio_mode: native   # binaire MinIO + service systemd
+```
+
+- En **Caddy natif**, le reverse-proxy tourne sur l'hôte et joint les backends conteneurisés
+  (Authelia, Homepage, Nextcloud, Immich) via des ports publiés **sur `127.0.0.1`** (cf.
+  `native_ports`). MinIO natif écoute aussi sur `127.0.0.1` — exposé uniquement par Caddy en HTTPS.
+- Tes **apps perso** (mini-PaaS) doivent alors déclarer un `host_port` dans `app.yml` et publier
+  `127.0.0.1:<host_port>:<port>` (les apps fournies le font déjà). Voir [`apps/README.md`](apps/README.md).
+- ⚠️ Mode récent : valide-le sur ta machine (voir la checklist du PR de cette fonctionnalité).
 
 ## Réseau : IPv4 **et** IPv6 (dual-stack)
 

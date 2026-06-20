@@ -23,6 +23,9 @@ Philosophie : **fermé par défaut**, surface d'attaque minimale, tout reproduct
   niveau nftables — donc **avant même d'atteindre Caddy** (pas de build Caddy custom requis).
 - **Moteur** : Docker (durci via `daemon.json`) **ou** Podman sans démon / rootless
   (`container_engine: podman`) pour réduire la surface d'attaque.
+- **Mode natif** (`caddy_mode` / `minio_mode: native`) : Caddy et MinIO en binaire + systemd
+  (unité MinIO durcie : `NoNewPrivileges`, `ProtectSystem=full`, `ProtectHome`). Les backends
+  écoutent sur **`127.0.0.1`** (jamais sur le LAN) ; seul Caddy expose en HTTPS.
 - **fail2ban** bannit les tentatives SSH en force brute.
 
 > ⚠️ Si tu administres la machine à distance, ajoute ton IP/CIDR à `ssh_allowed_cidrs`

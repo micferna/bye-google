@@ -6,6 +6,10 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- **Mode natif (sans conteneur) pour Caddy et MinIO** (`caddy_mode` / `minio_mode: native`) :
+  Caddy installé via apt + systemd, MinIO en binaire + systemd. En Caddy natif, les backends
+  conteneurisés sont publiés sur `127.0.0.1` (`native_ports`) ; les apps du mini-PaaS utilisent
+  un `host_port`. Compatible avec les 4 combinaisons (Caddy/MinIO × conteneur/natif).
 - **CrowdSec parse les logs d'accès Caddy** (collection `crowdsecurity/caddy`) : les attaques
   HTTP sont détectées puis bannies au niveau du pare-feu nftables, sans build Caddy custom.
   Caddy écrit un journal JSON dans `core/logs/access.log` (toggle `crowdsec_caddy_logs`).

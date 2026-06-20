@@ -8,5 +8,9 @@
 {% if app.protect | default(false) %}
     import authelia
 {% endif %}
+{% if caddy_mode | default('container') == 'native' %}
+    reverse_proxy 127.0.0.1:{{ app.host_port }}
+{% else %}
     reverse_proxy {{ app.name }}:{{ app.port }}
+{% endif %}
 }

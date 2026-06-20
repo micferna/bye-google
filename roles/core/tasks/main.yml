@@ -8,13 +8,30 @@
     - ""
     - authelia
     - homepage
-    - apps-caddy   # snippets Caddy générés par le mini-PaaS
-    - logs         # journaux d'accès Caddy (lus par CrowdSec)
+
+# Installe Caddy en natif (apt) si caddy_mode == native — AVANT de rendre le Caddyfile.
+- name: Installer Caddy en natif
+  ansible.builtin.include_tasks: caddy_native.yml
+  when: caddy_native | bool
+
+- name: Dossier des snippets d'apps Caddy
+  ansible.builtin.file:
+    path: "{{ caddy_apps_dest }}"
+    state: directory
+    owner: "{{ 'caddy' if caddy_native | bool else 'root' }}"
+    mode: "0750"
+
+- name: Dossier des journaux d'accès Caddy
+  ansible.builtin.file:
+    path: "{{ caddy_log_host_dir }}"
+    state: directory
+    owner: "{{ 'caddy' if caddy_native | bool else 'root' }}"
+    mode: "0750"
 
 - name: Caddyfile (reverse-proxy + TLS)
   ansible.builtin.template:
     src: Caddyfile.j2
-    dest: "{{ data_root }}/core/Caddyfile"
+    dest: "{{ caddyfile_dest }}"
     mode: "0640"
   notify: Reload caddy
 

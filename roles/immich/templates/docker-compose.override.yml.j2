@@ -1,9 +1,15 @@
 # Généré par Ansible — bye-google
-# Intègre Immich au reverse-proxy : le serveur rejoint le réseau « edge » et
-# on retire le port publié sur l'hôte (accès uniquement via Caddy / HTTPS).
+# Intègre Immich au reverse-proxy : le serveur rejoint le réseau « edge ».
+# - Caddy conteneur : pas de port publié (accès via le réseau edge).
+# - Caddy natif      : port publié sur 127.0.0.1 pour que Caddy (hôte) l'atteigne.
 services:
   immich-server:
+{% if caddy_native | bool %}
+    ports:
+      - "127.0.0.1:{{ native_ports.immich }}:2283"
+{% else %}
     ports: !reset []
+{% endif %}
     networks:
       - default
       - edge

@@ -25,7 +25,7 @@
 - name: "Générer la route Caddy (HTTPS + SSO éventuel) de l'app {{ app.name }}"
   ansible.builtin.template:
     src: app.caddy.j2
-    dest: "{{ data_root }}/core/apps-caddy/{{ app.name }}.caddy"
+    dest: "{{ caddy_apps_dest }}/{{ app.name }}.caddy"
     mode: "0640"
 
 - name: "Démarrer le conteneur de l'app {{ app.name }}"
