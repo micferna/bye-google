@@ -6,6 +6,9 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- **Pré-seeding des sondes Uptime-Kuma** (best-effort, via `uptime-kuma-api` dans un venv) :
+  crée automatiquement des moniteurs HTTP (Nextcloud, Immich, MinIO, Vaultwarden, Dashboard)
+  au déploiement. Gated par `uptimekuma_seed` + `vault_uptimekuma_password` ; n'échoue jamais le déploiement.
 - **Mode natif (sans conteneur) pour Caddy et MinIO** (`caddy_mode` / `minio_mode: native`) :
   Caddy installé via apt + systemd, MinIO en binaire + systemd. En Caddy natif, les backends
   conteneurisés sont publiés sur `127.0.0.1` (`native_ports`) ; les apps du mini-PaaS utilisent

@@ -41,6 +41,9 @@
     - role: apps
       tags: [apps]
       when: enable_apps | bool
+    - role: uptimekuma
+      tags: [uptimekuma, monitoring]
+      when: enable_apps | bool and uptimekuma_seed | bool
     - role: backup
       tags: [backup]
       when: enable_backup | bool
