@@ -56,6 +56,7 @@ vault_authelia_session_secret: "$(rnd)"
 vault_authelia_storage_key: "$(rnd)"
 vault_authelia_admin_password_hash: '$HASH'
 vault_restic_password: "$(pw)"
+vault_uptimekuma_password: "$(pw)"
 EOF
   ok "Secrets générés (chmod 600). Sauvegarde ce fichier en lieu sûr !"
 fi

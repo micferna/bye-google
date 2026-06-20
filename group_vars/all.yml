@@ -69,6 +69,13 @@ enable_minio: true
 enable_apps: true
 enable_backup: true
 
+# ── Supervision (Uptime-Kuma) ───────────────────────────────────────────
+# Pré-créer des sondes HTTP au déploiement (best-effort, via uptime-kuma-api).
+# Nécessite vault_uptimekuma_password (généré par bootstrap.sh). Si absent : ignoré.
+uptimekuma_seed: true
+uptimekuma_user: "{{ admin_user }}"
+uptimekuma_port: 8201
+
 # ── Sécurité de l'hôte ──────────────────────────────────────────────────
 harden_ssh: true
 # SSH n'est autorisé QUE depuis ces réseaux (LAN privé par défaut = pas d'accès WAN).

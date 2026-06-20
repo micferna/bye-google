@@ -1,0 +1,44 @@
+---
+# Pré-seeding des sondes Uptime-Kuma — best-effort (n'échoue jamais le déploiement).
+# Uptime-Kuma n'a pas d'API REST : on passe par la lib socket.io « uptime-kuma-api ».
+- name: Pré-seeding Uptime-Kuma
+  when:
+    - uptimekuma_seed | bool
+    - (vault_uptimekuma_password | default('')) | length > 0
+  block:
+    - name: Paquets Python (venv)
+      ansible.builtin.apt:
+        name:
+          - python3-venv
+          - python3-pip
+        state: present
+
+    - name: Installer uptime-kuma-api dans un venv dédié
+      ansible.builtin.pip:
+        name: uptime-kuma-api
+        virtualenv: "{{ data_root }}/core/uptimekuma-venv"
+        virtualenv_command: python3 -m venv
+
+    - name: Déposer le script de seeding
+      ansible.builtin.template:
+        src: seed.py.j2
+        dest: "{{ data_root }}/core/uptimekuma-seed.py"
+        mode: "0700"
+
+    - name: Attendre qu'Uptime-Kuma réponde
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ uptimekuma_port }}"
+        timeout: 90
+
+    - name: Exécuter le seeding (best-effort)
+      ansible.builtin.command:
+        cmd: "{{ data_root }}/core/uptimekuma-venv/bin/python {{ data_root }}/core/uptimekuma-seed.py"
+      register: seed_res
+      changed_when: "'ADDED' in seed_res.stdout"
+      failed_when: false
+
+    - name: Résultat du seeding
+      ansible.builtin.debug:
+        var: seed_res.stdout_lines
+      when: seed_res.stdout_lines | default([]) | length > 0

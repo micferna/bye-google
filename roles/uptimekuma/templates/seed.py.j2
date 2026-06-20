@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Généré par Ansible — pré-crée des sondes HTTP dans Uptime-Kuma (best-effort)."""
+import sys
+
+try:
+    from uptime_kuma_api import UptimeKumaApi, MonitorType
+except Exception as exc:  # lib absente / incompatible
+    print("SKIP uptime-kuma-api indisponible:", exc)
+    sys.exit(0)
+
+URL = "http://127.0.0.1:{{ uptimekuma_port }}"
+USER = "{{ uptimekuma_user }}"
+PASSWORD = "{{ vault_uptimekuma_password }}"
+IGNORE_TLS = {{ 'True' if tls_internal else 'False' }}
+
+MONITORS = [
+{% if enable_nextcloud %}
+    {"name": "Nextcloud", "url": "https://cloud.{{ domain }}"},
+{% endif %}
+{% if enable_immich %}
+    {"name": "Immich", "url": "https://photos.{{ domain }}"},
+{% endif %}
+{% if enable_minio %}
+    {"name": "MinIO", "url": "https://minio.{{ domain }}"},
+{% endif %}
+    {"name": "Vaultwarden", "url": "https://vault.{{ domain }}"},
+    {"name": "Dashboard", "url": "https://home.{{ domain }}"},
+]
+
+api = UptimeKumaApi(URL)
+try:
+    # Premier lancement : crée le compte admin (ignoré s'il existe déjà).
+    try:
+        api.setup(USER, PASSWORD)
+    except Exception:
+        pass
+    api.login(USER, PASSWORD)
+    existing = {m["name"] for m in api.get_monitors()}
+    for mon in MONITORS:
+        if mon["name"] in existing:
+            continue
+        api.add_monitor(
+            type=MonitorType.HTTP,
+            name=mon["name"],
+            url=mon["url"],
+            ignoreTls=IGNORE_TLS,
+        )
+        print("ADDED", mon["name"])
+except Exception as exc:
+    print("WARN seeding partiel/échoué:", exc)
+finally:
+    try:
+        api.disconnect()
+    except Exception:
+        pass
