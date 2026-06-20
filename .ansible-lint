@@ -1,0 +1,14 @@
+---
+profile: production
+
+exclude_paths:
+  - .github/
+  - apps/            # composes utilisateurs (non-Ansible)
+  - group_vars/vault.yml
+
+# Les .j2 (Caddyfile, nftables, composes) ne sont pas du YAML Ansible.
+kinds:
+  - yaml: "**/templates/**"
+
+skip_list:
+  - var-naming[no-role-prefix]   # variables partagées volontairement entre rôles

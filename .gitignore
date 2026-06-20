@@ -1,0 +1,8 @@
+# Secrets — NE JAMAIS committer
+group_vars/vault.yml
+*.retry
+*.log
+
+# Données locales éventuelles
+data/
+.secrets

@@ -1,0 +1,11 @@
+# Route générée par bye-google pour l'app « {{ app.name }} »
+{{ app.subdomain }}.{{ domain }} {
+{% if tls_internal %}
+    tls internal
+{% endif %}
+    import secure_headers
+{% if app.protect | default(false) %}
+    import authelia
+{% endif %}
+    reverse_proxy {{ app.name }}:{{ app.port }}
+}

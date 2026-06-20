@@ -1,0 +1,67 @@
+---
+- name: Vérifier la présence de Docker
+  ansible.builtin.command: docker --version
+  register: docker_check
+  changed_when: false
+  failed_when: false
+
+- name: Installer Docker (si absent) via le dépôt officiel
+  when: docker_check.rc != 0
+  block:
+    - name: Créer le dossier des clés APT
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Clé GPG Docker
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/debian/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Dépôt Docker
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable
+        filename: docker
+        state: present
+
+    - name: Paquets Docker
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+- name: Durcissement du démon Docker (daemon.json)
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": { "max-size": "10m", "max-file": "3" },
+        "live-restore": true,
+        "no-new-privileges": true,
+        "userland-proxy": false,
+        "icc": false,
+        "ip6tables": {{ enable_ipv6 | bool | lower }},
+        "experimental": {{ enable_ipv6 | bool | lower }}
+      }
+  notify: Restart docker
+
+- name: Démarrer et activer Docker
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Appliquer les changements du démon maintenant
+  ansible.builtin.meta: flush_handlers

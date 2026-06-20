@@ -1,0 +1,13 @@
+# Généré par Ansible — bye-google
+# Intègre Immich au reverse-proxy : le serveur rejoint le réseau « edge » et
+# on retire le port publié sur l'hôte (accès uniquement via Caddy / HTTPS).
+services:
+  immich-server:
+    ports: !reset []
+    networks:
+      - default
+      - edge
+
+networks:
+  edge:
+    external: true

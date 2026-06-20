@@ -1,0 +1,66 @@
+# Généré par Ansible — bye-google / stack core
+name: core
+
+services:
+  caddy:
+    image: caddy:{{ caddy_version }}
+    container_name: byeg-caddy
+    restart: unless-stopped
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - {{ data_root }}/core/Caddyfile:/etc/caddy/Caddyfile:ro
+      - {{ data_root }}/core/apps-caddy:/etc/caddy/apps:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+
+  authelia:
+    image: authelia/authelia:{{ authelia_version }}
+    container_name: byeg-authelia
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      TZ: "{{ timezone }}"
+    volumes:
+      - {{ data_root }}/core/authelia:/config
+    networks: [edge]
+    expose: ["9091"]
+
+  # Proxy en lecture seule du socket Docker (évite d'exposer le socket brut à Homepage)
+  dockerproxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      SERVICES: 1
+      TASKS: 1
+      NETWORKS: 1
+      POST: 0
+    volumes:
+      - {{ engine_socket }}:/var/run/docker.sock:ro
+    networks: [edge]
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:{{ homepage_version }}
+    restart: unless-stopped
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: "home.{{ domain }}"
+    volumes:
+      - {{ data_root }}/core/homepage:/app/config
+    networks: [edge]
+    expose: ["3000"]
+    depends_on: [dockerproxy]
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+    external: true

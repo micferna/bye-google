@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Généré par Ansible — bye-google / sauvegarde restic
+set -euo pipefail
+
+export RESTIC_REPOSITORY="{{ data_root }}/backup/restic"
+export RESTIC_PASSWORD="{{ vault_restic_password }}"
+
+# Initialise le dépôt au premier lancement
+restic snapshots >/dev/null 2>&1 || restic init
+
+# Dump des bases PostgreSQL pour des sauvegardes cohérentes (best-effort)
+dump_dir="{{ data_root }}/backup/dumps"
+mkdir -p "$dump_dir"
+{% if enable_nextcloud %}
+{{ engine_cmd }} exec byeg-nextcloud-db pg_dump -U nextcloud nextcloud \
+  > "$dump_dir/nextcloud.sql" 2>/dev/null || echo "warn: dump nextcloud ignoré"
+{% endif %}
+
+# Sauvegarde des données (hors dépôt restic lui-même)
+restic backup \
+  --tag byegoogle \
+  --exclude "{{ data_root }}/backup/restic" \
+  "{{ data_root }}"
+
+# Rétention
+restic forget --prune \
+  --keep-daily 7 --keep-weekly 4 --keep-monthly 6
+
+echo "Sauvegarde terminée : $(date)"
+# Astuce : pour un envoi hors-site, pointe RESTIC_REPOSITORY vers
+#   s3:https://s3.<domaine>/backups  (ton propre MinIO) ou un S3 externe,
+# avec AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY.

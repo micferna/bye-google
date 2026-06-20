@@ -1,0 +1,38 @@
+---
+- Dé-Google:
+{% if enable_nextcloud %}
+    - Nextcloud:
+        href: https://cloud.{{ domain }}
+        description: Fichiers · agenda · contacts
+        icon: nextcloud.png
+{% endif %}
+{% if enable_immich %}
+    - Immich:
+        href: https://photos.{{ domain }}
+        description: Photos & vidéos
+        icon: immich.png
+{% endif %}
+
+- Infra:
+    - Authelia:
+        href: https://auth.{{ domain }}
+        description: SSO / authentification
+        icon: authelia.png
+{% if enable_minio %}
+    - MinIO:
+        href: https://minio.{{ domain }}
+        description: Stockage objet S3
+        icon: minio.png
+{% endif %}
+
+{% if enable_apps %}
+- Apps & Sécurité:
+    - Vaultwarden:
+        href: https://vault.{{ domain }}
+        description: Mots de passe (Bitwarden)
+        icon: vaultwarden.png
+    - Uptime Kuma:
+        href: https://uptime.{{ domain }}
+        description: Supervision / statut
+        icon: uptime-kuma.png
+{% endif %}

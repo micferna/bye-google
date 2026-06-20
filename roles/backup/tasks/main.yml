@@ -1,0 +1,56 @@
+---
+- name: Installer restic
+  ansible.builtin.apt:
+    name: restic
+    state: present
+
+- name: Script de sauvegarde
+  ansible.builtin.template:
+    src: backup.sh.j2
+    dest: /usr/local/bin/byegoogle-backup.sh
+    owner: root
+    mode: "0700"
+
+- name: Service systemd de sauvegarde
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/byegoogle-backup.service
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=bye-google — sauvegarde restic
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      Type=oneshot
+      Nice=10
+      IOSchedulingClass=idle
+      ExecStart=/usr/local/bin/byegoogle-backup.sh
+
+- name: Timer quotidien
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/byegoogle-backup.timer
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=bye-google — sauvegarde quotidienne
+
+      [Timer]
+      OnCalendar=*-*-* 03:30:00
+      RandomizedDelaySec=900
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+
+- name: Activer le timer de sauvegarde
+  ansible.builtin.systemd:
+    name: byegoogle-backup.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Lancer une sauvegarde immédiate (make backup)
+  ansible.builtin.command: /usr/local/bin/byegoogle-backup.sh
+  when: backup_run_now | default(false) | bool
+  changed_when: true

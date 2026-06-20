@@ -1,0 +1,24 @@
+---
+# Mini-PaaS : déploie chaque dossier apps/<nom>/ contenant un app.yml,
+# génère sa route Caddy (HTTPS + SSO optionnel) et démarre son compose.
+- name: Trouver les apps (apps/*/app.yml)
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/apps"
+    patterns: "app.yml"
+    recurse: true
+  delegate_to: localhost
+  become: false
+  register: found_apps
+
+- name: Déployer chaque app
+  ansible.builtin.include_tasks: deploy_app.yml
+  loop: "{{ found_apps.files | map(attribute='path') | list }}"
+  loop_control:
+    loop_var: app_manifest
+    label: "{{ app_manifest | dirname | basename }}"
+
+- name: Recharger Caddy pour publier les routes des apps
+  ansible.builtin.command:
+    cmd: "{{ engine_cmd }} exec byeg-caddy caddy reload --config /etc/caddy/Caddyfile"
+  when: found_apps.files | length > 0
+  changed_when: true

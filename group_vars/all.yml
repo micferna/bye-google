@@ -1,0 +1,103 @@
+---
+# ════════════════════════════════════════════════════════════════════════
+#  CONFIGURATION PRINCIPALE  —  édite surtout `domain` puis lance ./bootstrap.sh
+# ════════════════════════════════════════════════════════════════════════
+
+# Nom de domaine de base. Les services seront en <service>.<domain>.
+# - Domaine privé (ex: home.lab / maison.arpa) -> garde tls_internal: true
+# - Vrai domaine public          -> mets tls_internal: false + acme_email
+domain: "home.lab"
+
+# Compte administrateur du SSO (Authelia)
+admin_user: "ocb"
+admin_email: "ocb.ketu@gmail.com"
+
+# Fuseau horaire (logs, planification, etc.)
+timezone: "Europe/Paris"
+
+# ── TLS / HTTPS ─────────────────────────────────────────────────────────
+# true  : Caddy génère une CA interne (rien n'est exposé, idéal LAN privé).
+#         Installe le certificat racine sur tes appareils (voir docs/SECURITY.md).
+# false : certificats Let's Encrypt (nécessite un vrai domaine + ports 80/443
+#         joignables depuis Internet + acme_email renseigné).
+tls_internal: true
+acme_email: ""
+
+# ── Moteur de conteneurs ────────────────────────────────────────────────
+# "docker" : le plus testé.
+# "podman" : SANS démon, compatible rootless — pour qui ne veut pas de Docker.
+container_engine: "docker"
+# Dérivés (ne pas modifier) :
+compose_cmd: "{{ 'docker compose' if container_engine == 'docker' else 'podman compose' }}"
+engine_cmd: "{{ container_engine }}"
+engine_socket: "{{ '/var/run/docker.sock' if container_engine == 'docker' else '/run/podman/podman.sock' }}"
+
+# ── Emplacement des données ─────────────────────────────────────────────
+data_root: "/srv/byegoogle"
+docker_network: "edge"
+
+# ── Pile réseau (dual-stack IPv4/IPv6) ──────────────────────────────────
+# true  : IPv6 activé de bout en bout (ip6tables Docker + réseau « edge » en IPv6).
+# false : IPv4 uniquement.
+enable_ipv6: true
+# Sous-réseau ULA privé pour les conteneurs (RFC 4193). Modifiable.
+edge_ipv6_subnet: "fd00:b9e6::/64"
+
+# ── Briques à activer ───────────────────────────────────────────────────
+enable_nextcloud: true
+enable_immich: true
+enable_minio: true
+enable_apps: true
+enable_backup: true
+
+# ── Sécurité de l'hôte ──────────────────────────────────────────────────
+harden_ssh: true
+# SSH n'est autorisé QUE depuis ces réseaux (LAN privé par défaut = pas d'accès WAN).
+# Ajoute l'IP/CIDR depuis lequel tu administres la machine si besoin.
+ssh_allowed_cidrs:
+  - "192.168.0.0/16"
+  - "10.0.0.0/8"
+  - "172.16.0.0/12"
+# Idem pour l'IPv6 : ULA + lien-local par défaut. Vide => SSH v6 fermé.
+ssh_allowed_cidrs6:
+  - "fc00::/7"
+  - "fe80::/10"
+# Désactiver l'authentification SSH par mot de passe (clé obligatoire).
+# ⚠️ Mets true UNIQUEMENT après avoir vérifié que ta clé publique fonctionne.
+ssh_disable_password: false
+enable_firewall: true
+enable_fail2ban: true
+enable_crowdsec: true
+enable_auto_updates: true
+
+# Pare-feu strict : DROP par défaut en INPUT, OUTPUT et FORWARD (egress filtré).
+# Seuls DNS/NTP/HTTP-S/DHCP/ICMP + réseaux de conteneurs sont autorisés.
+# ⚠️ PREROUTING/POSTROUTING (NAT) restent gérés par le moteur de conteneurs.
+firewall_strict: true
+firewall_log_drops: true
+# Ports de sortie supplémentaires (ex: 853 DoT, 587 SMTP, 51820 WireGuard)
+firewall_extra_egress_tcp: []
+firewall_extra_egress_udp: []
+
+# Mises à jour de sécurité automatiques
+auto_reboot: false              # redémarrer automatiquement si nécessaire
+auto_reboot_time: "04:00"
+
+# ── MinIO (S3) ──────────────────────────────────────────────────────────
+minio_root_user: "byeadmin"
+
+# ── Versions épinglées (modifiables) ────────────────────────────────────
+caddy_version: "2.8"
+authelia_version: "4.38"
+homepage_version: "latest"
+nextcloud_version: "30-apache"
+postgres_version: "16-alpine"
+redis_version: "7-alpine"
+# Immich évolue vite : "latest" prend la dernière release stable upstream.
+immich_release: "latest"
+minio_version: "latest"
+
+# ════════════════════════════════════════════════════════════════════════
+#  Les SECRETS sont dans group_vars/vault.yml (généré par ./bootstrap.sh).
+#  Voir group_vars/vault.example.yml pour la liste.
+# ════════════════════════════════════════════════════════════════════════

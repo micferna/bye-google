@@ -1,0 +1,39 @@
+---
+# Immich évolue très vite (image PostgreSQL/vecteurs en particulier). On récupère
+# donc le docker-compose OFFICIEL de la release choisie, et on l'intègre à notre
+# réseau « edge » via un fichier override + un .env maison.
+- name: Dossier Immich
+  ansible.builtin.file:
+    path: "{{ data_root }}/immich/library"
+    state: directory
+    mode: "0750"
+
+- name: Calculer le chemin de release Immich
+  ansible.builtin.set_fact:
+    immich_dl_path: "{{ 'latest/download' if immich_release == 'latest' else 'download/' + immich_release }}"
+
+- name: Récupérer le docker-compose officiel Immich ({{ immich_release }})
+  ansible.builtin.get_url:
+    url: "https://github.com/immich-app/immich/releases/{{ immich_dl_path }}/docker-compose.yml"
+    dest: "{{ data_root }}/immich/docker-compose.yml"
+    mode: "0640"
+    force: true
+
+- name: Fichier d'environnement Immich
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ data_root }}/immich/.env"
+    mode: "0600"
+
+- name: Override d'intégration (réseau edge, pas de port publié)
+  ansible.builtin.template:
+    src: docker-compose.override.yml.j2
+    dest: "{{ data_root }}/immich/docker-compose.override.yml"
+    mode: "0640"
+
+- name: Démarrer Immich
+  ansible.builtin.command:
+    cmd: "{{ compose_cmd }} up -d --remove-orphans"
+    chdir: "{{ data_root }}/immich"
+  register: im_up
+  changed_when: "'Started' in im_up.stderr or 'Created' in im_up.stderr or 'Recreated' in im_up.stderr"

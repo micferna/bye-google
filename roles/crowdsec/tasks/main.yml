@@ -1,0 +1,44 @@
+---
+# CrowdSec : détection comportementale (SSH, HTTP, scans…) + bouncer pare-feu
+# nftables qui bannit les IP malveillantes. Complète fail2ban.
+- name: Ajouter le dépôt APT CrowdSec
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      curl -fsSL https://packagecloud.io/install/repositories/crowdsec/crowdsec/script.deb.sh | bash
+    executable: /bin/bash
+    creates: /etc/apt/sources.list.d/crowdsec_crowdsec.list
+  changed_when: true
+
+- name: Installer l'agent CrowdSec
+  ansible.builtin.apt:
+    name: crowdsec
+    state: present
+    update_cache: true
+
+- name: Démarrer et activer CrowdSec
+  ansible.builtin.systemd:
+    name: crowdsec
+    enabled: true
+    state: started
+
+- name: Installer le bouncer pare-feu nftables
+  ansible.builtin.apt:
+    name: crowdsec-firewall-bouncer-nftables
+    state: present
+
+- name: Activer le bouncer pare-feu
+  ansible.builtin.systemd:
+    name: crowdsec-firewall-bouncer
+    enabled: true
+    state: started
+
+- name: Installer les collections de détection
+  ansible.builtin.command: "cscli collections install {{ item }}"
+  loop:
+    - crowdsecurity/sshd
+    - crowdsecurity/linux
+  register: cs_coll
+  changed_when: "'Enabled' in cs_coll.stdout or 'installed' in cs_coll.stdout"
+  failed_when: false
+  notify: Reload crowdsec

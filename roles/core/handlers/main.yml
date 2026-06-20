@@ -1,0 +1,12 @@
+---
+- name: Reload caddy
+  ansible.builtin.command:
+    cmd: "{{ engine_cmd }} exec byeg-caddy caddy reload --config /etc/caddy/Caddyfile"
+  register: caddy_reload
+  failed_when: false
+  changed_when: caddy_reload.rc == 0
+
+- name: Restart authelia
+  ansible.builtin.command:
+    cmd: "{{ engine_cmd }} restart byeg-authelia"
+  changed_when: true

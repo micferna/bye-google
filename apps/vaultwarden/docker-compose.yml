@@ -1,0 +1,22 @@
+# Exemple d'app bye-google : Vaultwarden (gestionnaire de mots de passe, compatible Bitwarden)
+name: vaultwarden
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      DOMAIN: "https://${FQDN}"
+      # Désactive l'inscription publique une fois ton compte créé.
+      SIGNUPS_ALLOWED: "true"
+    volumes:
+      - data:/data
+    networks: [edge]
+
+volumes:
+  data:
+
+networks:
+  edge:
+    external: true

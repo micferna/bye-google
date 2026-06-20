@@ -1,0 +1,23 @@
+---
+# Modèle des secrets attendus. Le vrai fichier `group_vars/vault.yml` est
+# généré automatiquement par ./bootstrap.sh (mots de passe aléatoires).
+#
+# Tu peux aussi le créer/chiffrer toi-même :
+#   ansible-vault create group_vars/vault.yml
+#
+# NE JAMAIS committer group_vars/vault.yml (déjà dans .gitignore).
+
+vault_nextcloud_db_password: "CHANGE_ME"
+vault_nextcloud_admin_password: "CHANGE_ME"
+
+vault_immich_db_password: "CHANGE_ME"
+
+vault_minio_root_password: "CHANGE_ME"
+
+vault_authelia_jwt_secret: "CHANGE_ME"
+vault_authelia_session_secret: "CHANGE_ME"
+vault_authelia_storage_key: "CHANGE_ME"
+# Hash argon2id du mot de passe admin (généré via le binaire authelia)
+vault_authelia_admin_password_hash: "$argon2id$v=19$m=65536,t=3,p=4$CHANGE_ME"
+
+vault_restic_password: "CHANGE_ME"

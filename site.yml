@@ -1,0 +1,46 @@
+---
+# ════════════════════════════════════════════════════════════════════════
+#  Playbook principal bye-google
+#  Lancer tout :        ansible-playbook -i inventory.ini site.yml -K
+#  Une brique précise : ... --tags nextcloud
+# ════════════════════════════════════════════════════════════════════════
+- name: Déployer la plateforme bye-google
+  hosts: homelab
+  become: true
+
+  pre_tasks:
+    - name: Vérifier que les secrets (vault) sont présents
+      ansible.builtin.assert:
+        that: vault_authelia_session_secret is defined
+        fail_msg: >-
+          group_vars/vault.yml est absent ou incomplet.
+          Lance ./bootstrap.sh pour générer les secrets.
+      tags: always
+
+  roles:
+    - role: common
+      tags: [common, always]
+    - role: hardening
+      tags: [hardening]
+    - role: crowdsec
+      tags: [crowdsec, security]
+      when: enable_crowdsec | bool
+    - role: engine
+      tags: [engine, always]
+    - role: core
+      tags: [core]
+    - role: nextcloud
+      tags: [nextcloud]
+      when: enable_nextcloud | bool
+    - role: immich
+      tags: [immich]
+      when: enable_immich | bool
+    - role: minio
+      tags: [minio]
+      when: enable_minio | bool
+    - role: apps
+      tags: [apps]
+      when: enable_apps | bool
+    - role: backup
+      tags: [backup]
+      when: enable_backup | bool

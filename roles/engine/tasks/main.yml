@@ -1,0 +1,16 @@
+---
+# Moteur de conteneurs interchangeable : Docker (démon) ou Podman (sans démon).
+- name: "Installer et configurer le moteur : {{ container_engine }}"
+  ansible.builtin.include_tasks: "{{ container_engine }}.yml"
+
+# ── Réseau partagé « edge » (agnostique du moteur) ──────────────────────
+- name: Créer le réseau privé (dual-stack si enable_ipv6)
+  ansible.builtin.command: >-
+    {{ engine_cmd }} network create
+    {{ '--ipv6 --subnet ' + edge_ipv6_subnet if enable_ipv6 | bool else '' }}
+    {{ docker_network }}
+  register: net_create
+  changed_when: "'already exists' not in net_create.stderr"
+  failed_when:
+    - net_create.rc != 0
+    - "'already exists' not in net_create.stderr"

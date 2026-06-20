@@ -1,0 +1,25 @@
+---
+- name: Dossier Nextcloud
+  ansible.builtin.file:
+    path: "{{ data_root }}/nextcloud"
+    state: directory
+    mode: "0750"
+
+- name: Fichier d'environnement Nextcloud
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ data_root }}/nextcloud/.env"
+    mode: "0600"
+
+- name: Générer le compose Nextcloud
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ data_root }}/nextcloud/docker-compose.yml"
+    mode: "0640"
+
+- name: Démarrer Nextcloud
+  ansible.builtin.command:
+    cmd: "{{ compose_cmd }} up -d --remove-orphans"
+    chdir: "{{ data_root }}/nextcloud"
+  register: nc_up
+  changed_when: "'Started' in nc_up.stderr or 'Created' in nc_up.stderr or 'Recreated' in nc_up.stderr"

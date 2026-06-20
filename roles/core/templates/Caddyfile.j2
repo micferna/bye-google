@@ -1,0 +1,83 @@
+# Généré par Ansible — bye-google reverse-proxy
+{
+{% if not tls_internal %}
+    email {{ acme_email }}
+{% endif %}
+    admin off
+}
+
+# ── Snippets réutilisables ──────────────────────────────────────────────
+(tls_conf) {
+{% if tls_internal %}
+    tls internal
+{% endif %}
+}
+
+(secure_headers) {
+    header {
+        Strict-Transport-Security "max-age=31536000;"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+}
+
+# Protège un site derrière le SSO Authelia
+(authelia) {
+    forward_auth authelia:9091 {
+        uri /api/authz/forward-auth
+        copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+    }
+}
+
+# ── Portail SSO ─────────────────────────────────────────────────────────
+auth.{{ domain }} {
+    import tls_conf
+    import secure_headers
+    reverse_proxy authelia:9091
+}
+
+# ── Dashboard (protégé par SSO) ─────────────────────────────────────────
+home.{{ domain }} {
+    import tls_conf
+    import secure_headers
+    import authelia
+    reverse_proxy homepage:3000
+}
+
+{% if enable_nextcloud %}
+# ── Nextcloud ───────────────────────────────────────────────────────────
+cloud.{{ domain }} {
+    import tls_conf
+    import secure_headers
+    redir /.well-known/carddav /remote.php/dav 301
+    redir /.well-known/caldav /remote.php/dav 301
+    reverse_proxy nextcloud:80
+}
+{% endif %}
+
+{% if enable_immich %}
+# ── Immich (photos) ─────────────────────────────────────────────────────
+photos.{{ domain }} {
+    import tls_conf
+    import secure_headers
+    reverse_proxy immich-server:2283
+}
+{% endif %}
+
+{% if enable_minio %}
+# ── MinIO : API S3 + console ────────────────────────────────────────────
+s3.{{ domain }} {
+    import tls_conf
+    reverse_proxy minio:9000
+}
+minio.{{ domain }} {
+    import tls_conf
+    import secure_headers
+    reverse_proxy minio:9001
+}
+{% endif %}
+
+# ── Apps perso (mini-PaaS) : routes générées dans /etc/caddy/apps/*.caddy ─
+import /etc/caddy/apps/*.caddy

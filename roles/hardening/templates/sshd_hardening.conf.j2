@@ -1,0 +1,12 @@
+# Durcissement SSH — bye-google (roles/hardening)
+PermitRootLogin prohibit-password
+PubkeyAuthentication yes
+PasswordAuthentication {{ 'no' if ssh_disable_password | bool else 'yes' }}
+KbdInteractiveAuthentication {{ 'no' if ssh_disable_password | bool else 'yes' }}
+PermitEmptyPasswords no
+X11Forwarding no
+MaxAuthTries 3
+LoginGraceTime 30
+ClientAliveInterval 300
+ClientAliveCountMax 2
+AllowAgentForwarding no

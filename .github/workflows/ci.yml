@@ -1,0 +1,44 @@
+---
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (yamllint + ansible-lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Installer les linters
+        run: pip install ansible-core ansible-lint yamllint
+      - name: Collections Ansible
+        run: ansible-galaxy collection install -r requirements.yml
+      - run: yamllint .
+      - run: ansible-lint
+      - run: ansible-playbook -i inventory.ini site.yml --syntax-check
+
+  security:
+    name: Sécurité (secrets + IaC)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan des secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+      - name: Misconfigurations IaC (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "0"

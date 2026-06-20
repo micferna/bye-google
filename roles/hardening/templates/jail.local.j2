@@ -1,0 +1,10 @@
+# fail2ban — bye-google
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 4
+backend  = systemd
+
+[sshd]
+enabled = true
+port    = ssh

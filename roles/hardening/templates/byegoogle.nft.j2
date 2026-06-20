@@ -1,0 +1,127 @@
+#!/usr/sbin/nft -f
+# ════════════════════════════════════════════════════════════════════════
+#  Pare-feu bye-google — DEFAULT DROP en INPUT / OUTPUT / FORWARD.
+#  Table dédiée « inet byegoogle » : on ne flush jamais les chaînes Docker.
+#
+#  ⚠️ NAT (PREROUTING / POSTROUTING) : volontairement NON filtré ici.
+#     Ces hooks servent au SNAT/masquerade des conteneurs (gérés par le
+#     moteur). Y appliquer un DROP couperait tout le réseau des conteneurs.
+#     Le contrôle se fait aux hooks « filter » (input/output/forward).
+#  Géré par Ansible (roles/hardening). Ne pas éditer à la main.
+# ════════════════════════════════════════════════════════════════════════
+
+table inet byegoogle
+delete table inet byegoogle
+
+table inet byegoogle {
+    set ssh_allowed {
+        type ipv4_addr
+        flags interval
+        elements = { {{ ssh_allowed_cidrs | join(', ') }} }
+    }
+{% if ssh_allowed_cidrs6 %}
+    set ssh_allowed6 {
+        type ipv6_addr
+        flags interval
+        elements = { {{ ssh_allowed_cidrs6 | join(', ') }} }
+    }
+{% endif %}
+
+    # ── INGRESS ─────────────────────────────────────────────────────────
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        iif "lo" accept
+        ct state established,related accept
+        ct state invalid drop
+
+        # ICMPv4 + ICMPv6 (NDP/RA/SLAAC/PMTUD — indispensable à IPv6)
+        ip protocol icmp accept
+        ip6 nexthdr ipv6-icmp accept
+
+        # Client DHCP (réponses serveur -> client)
+        udp sport 67 udp dport 68 accept
+        ip6 nexthdr udp udp sport 547 udp dport 546 accept
+
+        # SSH depuis les réseaux autorisés (rate-limité)
+        tcp dport 22 ip saddr @ssh_allowed ct state new limit rate 10/minute accept
+{% if ssh_allowed_cidrs6 %}
+        tcp dport 22 ip6 saddr @ssh_allowed6 ct state new limit rate 10/minute accept
+{% endif %}
+{% if not tls_internal %}
+        # HTTP/HTTPS public (Caddy + ACME) si TLS Let's Encrypt
+        tcp dport { 80, 443 } accept
+{% endif %}
+
+        # Trafic des conteneurs vers les services de l'hôte (bridges Docker/Podman)
+        iifname "docker0" accept
+        iifname "br-*" accept
+        iifname "podman*" accept
+        iifname "cni-*" accept
+{% if firewall_log_drops | default(true) %}
+        limit rate 5/minute log prefix "byeg-drop-in " counter
+{% endif %}
+    }
+
+    # ── EGRESS (sorties de l'hôte) ──────────────────────────────────────
+    chain output {
+        type filter hook output priority filter; policy {{ 'drop' if firewall_strict | default(true) else 'accept' }};
+{% if firewall_strict | default(true) %}
+        oif "lo" accept
+        ct state established,related accept
+        ct state invalid drop
+
+        ip protocol icmp accept
+        ip6 nexthdr ipv6-icmp accept
+
+        # DNS + NTP (résolution, synchro horaire)
+        udp dport { 53, 123 } accept
+        tcp dport 53 accept
+
+        # HTTP/HTTPS sortant : apt, pull d'images, ACME/Let's Encrypt
+        tcp dport { 80, 443 } accept
+
+        # Client DHCP (requêtes client -> serveur)
+        udp sport 68 udp dport 67 accept
+        ip6 nexthdr udp udp sport 546 udp dport 547 accept
+
+        # Vers les conteneurs (l'hôte joint les bridges Docker/Podman)
+        oifname "docker0" accept
+        oifname "br-*" accept
+        oifname "podman*" accept
+        oifname "cni-*" accept
+{% if firewall_extra_egress_tcp | default([]) %}
+        tcp dport { {{ firewall_extra_egress_tcp | join(', ') }} } accept
+{% endif %}
+{% if firewall_extra_egress_udp | default([]) %}
+        udp dport { {{ firewall_extra_egress_udp | join(', ') }} } accept
+{% endif %}
+{% if firewall_log_drops | default(true) %}
+        limit rate 5/minute log prefix "byeg-drop-out " counter
+{% endif %}
+{% endif %}
+    }
+
+    # ── FORWARD (transit : conteneurs <-> réseau) ───────────────────────
+    chain forward {
+        type filter hook forward priority filter; policy {{ 'drop' if firewall_strict | default(true) else 'accept' }};
+{% if firewall_strict | default(true) %}
+        ct state established,related accept
+        ct state invalid drop
+
+        # Réseaux de conteneurs : egress, inter-conteneurs et ports publiés.
+        # (Docker/Podman imposent en plus leurs propres règles par port.)
+        iifname "docker0" accept
+        oifname "docker0" accept
+        iifname "br-*" accept
+        oifname "br-*" accept
+        iifname "podman*" accept
+        oifname "podman*" accept
+        iifname "cni-*" accept
+        oifname "cni-*" accept
+{% if firewall_log_drops | default(true) %}
+        limit rate 5/minute log prefix "byeg-drop-fwd " counter
+{% endif %}
+{% endif %}
+    }
+}

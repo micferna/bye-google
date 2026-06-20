@@ -1,0 +1,36 @@
+---
+- name: "Charger le manifeste de l'app : {{ app_manifest | dirname | basename }}"
+  ansible.builtin.include_vars:
+    file: "{{ app_manifest }}"
+    name: app
+
+- name: "Créer le dossier de déploiement de l'app {{ app.name }}"
+  ansible.builtin.file:
+    path: "{{ data_root }}/apps/{{ app.name }}"
+    state: directory
+    mode: "0750"
+
+- name: "Copier les fichiers (compose, etc.) de l'app {{ app.name }}"
+  ansible.builtin.copy:
+    src: "{{ app_manifest | dirname }}/"
+    dest: "{{ data_root }}/apps/{{ app.name }}/"
+    mode: "0640"
+
+- name: "Générer les variables d'environnement de l'app {{ app.name }}"
+  ansible.builtin.template:
+    src: app.env.j2
+    dest: "{{ data_root }}/apps/{{ app.name }}/.env"
+    mode: "0600"
+
+- name: "Générer la route Caddy (HTTPS + SSO éventuel) de l'app {{ app.name }}"
+  ansible.builtin.template:
+    src: app.caddy.j2
+    dest: "{{ data_root }}/core/apps-caddy/{{ app.name }}.caddy"
+    mode: "0640"
+
+- name: "Démarrer le conteneur de l'app {{ app.name }}"
+  ansible.builtin.command:
+    cmd: "{{ compose_cmd }} up -d --remove-orphans"
+    chdir: "{{ data_root }}/apps/{{ app.name }}"
+  register: app_up
+  changed_when: "'Started' in app_up.stderr or 'Created' in app_up.stderr or 'Recreated' in app_up.stderr"

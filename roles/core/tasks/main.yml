@@ -1,0 +1,53 @@
+---
+- name: Créer les dossiers de config (core)
+  ansible.builtin.file:
+    path: "{{ data_root }}/core/{{ item }}"
+    state: directory
+    mode: "0750"
+  loop:
+    - ""
+    - authelia
+    - homepage
+    - apps-caddy   # snippets Caddy générés par le mini-PaaS
+
+- name: Caddyfile (reverse-proxy + TLS)
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: "{{ data_root }}/core/Caddyfile"
+    mode: "0640"
+  notify: Reload caddy
+
+- name: Configuration Authelia
+  ansible.builtin.template:
+    src: "authelia/{{ item }}.j2"
+    dest: "{{ data_root }}/core/authelia/{{ item }}"
+    mode: "0640"
+  loop:
+    - configuration.yml
+    - users.yml
+  notify: Restart authelia
+
+- name: Configuration Homepage (dashboard)
+  ansible.builtin.template:
+    src: "homepage/{{ item }}.j2"
+    dest: "{{ data_root }}/core/homepage/{{ item }}"
+    mode: "0640"
+  loop:
+    - settings.yaml
+    - services.yaml
+    - widgets.yaml
+    - bookmarks.yaml
+    - docker.yaml
+
+- name: Générer le compose de la stack core
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ data_root }}/core/docker-compose.yml"
+    mode: "0640"
+
+- name: Démarrer la stack core
+  ansible.builtin.command:
+    cmd: "{{ compose_cmd }} up -d --remove-orphans"
+    chdir: "{{ data_root }}/core"
+  register: core_up
+  changed_when: "'Started' in core_up.stderr or 'Created' in core_up.stderr or 'Recreated' in core_up.stderr"

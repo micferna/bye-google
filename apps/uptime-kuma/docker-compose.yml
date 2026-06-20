@@ -1,0 +1,18 @@
+# App bye-google : Uptime-Kuma (supervision / page de statut)
+name: uptime-kuma
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - data:/app/data
+    networks: [edge]
+
+volumes:
+  data:
+
+networks:
+  edge:
+    external: true

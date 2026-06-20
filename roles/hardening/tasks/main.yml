@@ -1,0 +1,125 @@
+---
+# ── Durcissement réseau (sysctl) ────────────────────────────────────────
+- name: Sysctl — durcissement réseau & noyau
+  ansible.posix.sysctl:
+    name: "{{ item.k }}"
+    value: "{{ item.v }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - { k: "net.ipv4.conf.all.rp_filter", v: "1" }
+    - { k: "net.ipv4.conf.all.accept_redirects", v: "0" }
+    - { k: "net.ipv4.conf.all.send_redirects", v: "0" }
+    - { k: "net.ipv4.conf.all.accept_source_route", v: "0" }
+    - { k: "net.ipv4.conf.all.log_martians", v: "1" }
+    - { k: "net.ipv6.conf.all.accept_redirects", v: "0" }
+    - { k: "net.ipv6.conf.all.accept_source_route", v: "0" }
+    - { k: "kernel.dmesg_restrict", v: "1" }
+    - { k: "kernel.kptr_restrict", v: "2" }
+    - { k: "fs.protected_hardlinks", v: "1" }
+    - { k: "fs.protected_symlinks", v: "1" }
+  failed_when: false
+
+# ── Pare-feu nftables ───────────────────────────────────────────────────
+# Stratégie : table dédiée « inet byegoogle » avec INPUT en policy drop.
+# On NE flush PAS tout le ruleset -> Docker (FORWARD/nat) reste intact.
+# Les ports 80/443 publiés par Docker passent par DNAT/FORWARD, pas par INPUT.
+- name: Installer nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+  when: enable_firewall | bool
+
+- name: Déposer le jeu de règles bye-google
+  ansible.builtin.template:
+    src: byegoogle.nft.j2
+    dest: /etc/nftables.d/byegoogle.nft
+    owner: root
+    mode: "0600"
+    validate: "nft -c -f %s"
+  when: enable_firewall | bool
+  notify: Reload nftables
+
+- name: S'assurer que /etc/nftables.conf inclut notre jeu de règles
+  ansible.builtin.lineinfile:
+    path: /etc/nftables.conf
+    line: 'include "/etc/nftables.d/*.nft"'
+    create: true
+    mode: "0644"
+  when: enable_firewall | bool
+  notify: Reload nftables
+
+- name: Activer nftables au démarrage
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: true
+    state: started
+  when: enable_firewall | bool
+
+# ── SSH durci ───────────────────────────────────────────────────────────
+- name: Drop-in de durcissement SSH
+  ansible.builtin.template:
+    src: sshd_hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/00-byegoogle.conf
+    owner: root
+    mode: "0600"
+    validate: "sshd -t -f %s"
+  when: harden_ssh | bool
+  notify: Restart sshd
+
+# ── fail2ban ────────────────────────────────────────────────────────────
+- name: Installer fail2ban
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+  when: enable_fail2ban | bool
+
+- name: Configurer la prison sshd
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    mode: "0644"
+  when: enable_fail2ban | bool
+  notify: Restart fail2ban
+
+- name: Activer fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started
+  when: enable_fail2ban | bool
+
+# ── Mises à jour de sécurité automatiques ───────────────────────────────
+- name: Installer unattended-upgrades
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+  when: enable_auto_updates | bool
+
+- name: Activer les mises à jour automatiques
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::Download-Upgradeable-Packages "1";
+      APT::Periodic::AutocleanInterval "7";
+  when: enable_auto_updates | bool
+
+- name: Configurer les origines de sécurité et le redémarrage auto
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/51byegoogle-upgrades
+    mode: "0644"
+    content: |
+      Unattended-Upgrade::Origins-Pattern {
+        "origin=Debian,codename=${distro_codename},label=Debian-Security";
+        "origin=Debian,codename=${distro_codename}-security,label=Debian-Security";
+        "origin=*,codename=${distro_codename},label=*";
+      };
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      Unattended-Upgrade::Automatic-Reboot "{{ 'true' if auto_reboot | bool else 'false' }}";
+      Unattended-Upgrade::Automatic-Reboot-Time "{{ auto_reboot_time }}";
+  when: enable_auto_updates | bool

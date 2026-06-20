@@ -1,0 +1,22 @@
+# Généré par Ansible — bye-google / MinIO (stockage objet compatible S3)
+name: minio
+
+services:
+  minio:
+    image: minio/minio:{{ minio_version }}
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_SERVER_URL: "https://s3.{{ domain }}"
+      MINIO_BROWSER_REDIRECT_URL: "https://minio.{{ domain }}"
+    volumes:
+      - {{ data_root }}/minio/data:/data
+    networks: [edge]
+    expose: ["9000", "9001"]
+
+networks:
+  edge:
+    external: true

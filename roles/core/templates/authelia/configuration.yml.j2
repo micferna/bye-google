@@ -1,0 +1,53 @@
+# Généré par Ansible — bye-google / Authelia
+theme: dark
+
+server:
+  address: 'tcp://0.0.0.0:9091'
+
+log:
+  level: info
+
+totp:
+  issuer: '{{ domain }}'
+
+identity_validation:
+  reset_password:
+    jwt_secret: '{{ vault_authelia_jwt_secret }}'
+
+authentication_backend:
+  file:
+    path: /config/users.yml
+    password:
+      algorithm: argon2
+
+access_control:
+  default_policy: deny
+  rules:
+    - domain: 'auth.{{ domain }}'
+      policy: bypass
+    - domain: '*.{{ domain }}'
+      policy: one_factor
+
+session:
+  name: authelia_session
+  secret: '{{ vault_authelia_session_secret }}'
+  cookies:
+    - domain: '{{ domain }}'
+      authelia_url: 'https://auth.{{ domain }}'
+      default_redirection_url: 'https://home.{{ domain }}'
+      expiration: '1 hour'
+      inactivity: '5 minutes'
+
+regulation:
+  max_retries: 4
+  find_time: '2 minutes'
+  ban_time: '10 minutes'
+
+storage:
+  encryption_key: '{{ vault_authelia_storage_key }}'
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  filesystem:
+    filename: /config/notification.txt

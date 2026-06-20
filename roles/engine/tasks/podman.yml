@@ -1,0 +1,32 @@
+---
+# Podman : pas de démon central. On expose une socket compatible API Docker
+# (pour le proxy de socket / Homepage) et on utilise « podman compose ».
+- name: Paquets Podman + compose
+  ansible.builtin.apt:
+    name:
+      - podman
+      - podman-compose
+    state: present
+    update_cache: true
+
+- name: Activer la socket Podman (API compatible Docker, lecture seule via proxy)
+  ansible.builtin.systemd:
+    name: podman.socket
+    enabled: true
+    state: started
+
+- name: Activer le forwarding IPv6 si dual-stack
+  ansible.posix.sysctl:
+    name: net.ipv6.conf.all.forwarding
+    value: "1"
+    sysctl_set: true
+    state: present
+    reload: true
+  when: enable_ipv6 | bool
+  failed_when: false
+
+- name: Note d'intégration Podman
+  ansible.builtin.debug:
+    msg: >-
+      Podman actif (sans démon). Pour un mode 100 % rootless, lance le playbook
+      sous un utilisateur dédié avec « loginctl enable-linger ». Voir docs/SECURITY.md.

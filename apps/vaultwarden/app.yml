@@ -1,0 +1,5 @@
+name: vaultwarden
+subdomain: vault
+port: 80
+# Vaultwarden a sa propre authentification forte -> pas de double SSO.
+protect: false
