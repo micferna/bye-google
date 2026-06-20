@@ -68,6 +68,9 @@ ssh_disable_password: false
 enable_firewall: true
 enable_fail2ban: true
 enable_crowdsec: true
+# CrowdSec lit les logs d'accès Caddy pour bannir les attaquants HTTP
+# (via le bouncer pare-feu nftables), sans build Caddy custom.
+crowdsec_caddy_logs: true
 enable_auto_updates: true
 
 # Pare-feu strict : DROP par défaut en INPUT, OUTPUT et FORWARD (egress filtré).

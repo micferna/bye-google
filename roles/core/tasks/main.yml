@@ -9,6 +9,7 @@
     - authelia
     - homepage
     - apps-caddy   # snippets Caddy générés par le mini-PaaS
+    - logs         # journaux d'accès Caddy (lus par CrowdSec)
 
 - name: Caddyfile (reverse-proxy + TLS)
   ansible.builtin.template:

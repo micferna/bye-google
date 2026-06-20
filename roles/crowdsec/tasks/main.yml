@@ -42,3 +42,24 @@
   changed_when: "'Enabled' in cs_coll.stdout or 'installed' in cs_coll.stdout"
   failed_when: false
   notify: Reload crowdsec
+
+# ── Détection des attaques HTTP via les logs d'accès Caddy ──────────────
+- name: Installer la collection Caddy
+  ansible.builtin.command: cscli collections install crowdsecurity/caddy
+  register: cs_caddy
+  changed_when: "'Enabled' in cs_caddy.stdout or 'installed' in cs_caddy.stdout"
+  failed_when: false
+  when: crowdsec_caddy_logs | default(true)
+  notify: Reload crowdsec
+
+- name: Déclarer la source de logs Caddy à CrowdSec
+  ansible.builtin.copy:
+    dest: /etc/crowdsec/acquis.d/caddy.yaml
+    mode: "0644"
+    content: |
+      filenames:
+        - {{ data_root }}/core/logs/access.log
+      labels:
+        type: caddy
+  when: crowdsec_caddy_logs | default(true)
+  notify: Reload crowdsec

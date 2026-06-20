@@ -16,6 +16,7 @@ services:
     volumes:
       - {{ data_root }}/core/Caddyfile:/etc/caddy/Caddyfile:ro
       - {{ data_root }}/core/apps-caddy:/etc/caddy/apps:ro
+      - {{ data_root }}/core/logs:/var/log/caddy
       - caddy_data:/data
       - caddy_config:/config
     networks: [edge]
